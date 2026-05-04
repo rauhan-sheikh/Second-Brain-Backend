@@ -3,6 +3,7 @@ import { z, ZodError } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/user.model";
+import { userMiddleware } from "../middleware";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -80,6 +81,19 @@ router.post("/reset-password", async (req: Request, res: Response) => {
     if (err instanceof ZodError) {
       return res.status(400).json({ errors: err.issues });
     }
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/me", userMiddleware, async (req: Request, res: Response) => {
+  console.log("Get current user request received");
+  try {
+    const userId = (req as any).userId;
+    const user = await UserModel.findById(userId).select("username");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ username: user.username });
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
