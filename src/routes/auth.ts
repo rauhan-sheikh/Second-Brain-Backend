@@ -92,7 +92,7 @@ router.get("/me", userMiddleware, async (req: Request, res: Response) => {
     const user = await UserModel.findById(userId).select("username");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ username: user.username });
+    res.status(200).json({ username: user.username, _id: userId });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
