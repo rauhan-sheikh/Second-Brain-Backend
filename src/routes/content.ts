@@ -6,19 +6,37 @@ import { userMiddleware } from "../middleware";
 
 const router = express.Router();
 
-const contentSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  link: z.string().url("Invalid URL format"),
-  tags: z.array(z.string()).optional(),
-  type: z.enum([
-    ContentType.ARTICLE,
-    ContentType.TWEET,
-    ContentType.VIDEO,
-    ContentType.BOOK,
-    ContentType.OTHER,
-  ]),
-});
+const contentSchema = z
+  .object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().min(1, "Description is required"),
+    link: z.string().url("Invalid URL format").optional().or(z.literal("")),
+    tags: z.array(z.string()).optional(),
+    type: z.enum([
+      ContentType.ARTICLE,
+      ContentType.TWEET,
+      ContentType.VIDEO,
+      ContentType.BOOK,
+      ContentType.OTHER,
+    ]),
+  })
+  .refine(
+    (data) => {
+      if (
+        data.type === ContentType.ARTICLE ||
+        data.type === ContentType.VIDEO ||
+        data.type === ContentType.BOOK ||
+        data.type === ContentType.TWEET
+      ) {
+        return !!data.link && data.link.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Link is required for this content type",
+      path: ["link"],
+    },
+  );
 
 router.post("/", userMiddleware, async (req: Request, res: Response) => {
   try {
@@ -39,7 +57,7 @@ router.post("/", userMiddleware, async (req: Request, res: Response) => {
     const existingTagNames = existingTags.map((tag) => tag.name);
 
     const newTagNames = uniqueTags.filter(
-      (tag) => !existingTagNames.includes(tag)
+      (tag) => !existingTagNames.includes(tag),
     );
     const newTags = newTagNames.length
       ? await TagModel.insertMany(newTagNames.map((name) => ({ name })))
